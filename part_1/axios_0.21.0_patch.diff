@@ -1,0 +1,36 @@
+diff --git a/lib/adapters/xhr.js b/lib/adapters/xhr.js
+index 3027752..5dada2c 100644
+--- a/lib/adapters/xhr.js
++++ b/lib/adapters/xhr.js
+@@ -105,7 +105,8 @@ module.exports = function xhrAdapter(config) {
+     // Specifically not if we're in a web worker, or react-native.
+     if (utils.isStandardBrowserEnv()) {
+       // Add xsrf header
+-      var xsrfValue = (config.withCredentials || isURLSameOrigin(fullPath)) && config.xsrfCookieName ?
++      // Backported according to CVE-2023-45857
++      var xsrfValue = isURLSameOrigin(fullPath) && config.xsrfCookieName ?
+         cookies.read(config.xsrfCookieName) :
+         undefined;
+ 
+diff --git a/test/specs/xsrf.spec.js b/test/specs/xsrf.spec.js
+index 56cc0d2..b0480bc 100644
+--- a/test/specs/xsrf.spec.js
++++ b/test/specs/xsrf.spec.js
+@@ -67,7 +67,7 @@ describe('xsrf', function () {
+     });
+   });
+ 
+-  it('should set xsrf header for cross origin when using withCredentials', function (done) {
++  it('should not set xsrf header for cross origin when using withCredentials', function (done) {
+     document.cookie = axios.defaults.xsrfCookieName + '=12345';
+ 
+     axios('http://example.com/', {
+@@ -75,7 +75,7 @@ describe('xsrf', function () {
+     });
+ 
+     getAjaxRequest().then(function (request) {
+-      expect(request.requestHeaders[axios.defaults.xsrfHeaderName]).toEqual('12345');
++      expect(request.requestHeaders[axios.defaults.xsrfHeaderName]).toEqual(undefined);
+       done();
+     });
+   });
